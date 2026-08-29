@@ -1,5 +1,8 @@
 # 教育館逃生訓練 | Education Building Evacuation Trainer
 
+🎮 **線上版：https://u101001702.github.io/nthu-evacuation-trainer/**
+📊 教官看板：https://u101001702.github.io/nthu-evacuation-trainer/?dashboard
+
 清華大學教育館 2D 俯視災害逃生訓練互動遊戲。
 用於校園避難教育與第一線災害應變教學，**不是娛樂遊戲**。
 
@@ -117,6 +120,30 @@ React 18 · TypeScript (strict) · Vite 5 · HTML5 Canvas 2D · WebAudio
 **撤離路徑選擇**（最重要的教學圖）、逃生時間分布、
 移動距離 vs 逃生時間散布、樓層切換次數、最快前 10 名。
 每 15 秒自動更新，可用場次篩選。
+
+---
+
+## 部署（GitHub Pages）
+
+線上版放在 `gh-pages` 分支（build 產物），原始碼在 `main`。
+
+改完程式要重新上線：
+
+```bash
+npm run build
+touch dist/.nojekyll
+cd dist
+git add -A
+git commit -m "Deploy: 說明這次改了什麼"
+git push https://github.com/u101001702/nthu-evacuation-trainer.git gh-pages:gh-pages
+```
+
+`dist/` 內有一個獨立的 git repo 專門對應 `gh-pages` 分支，`dist` 本身在主 repo 是被忽略的。
+推上去約 1 分鐘後線上版就會更新。
+
+> 目前 `src/config/backend.ts` 的 `BUILT_IN_API_URL` 還是空的，
+> 所以線上版暫時不會上傳成績。填好 Apps Script 網址後重新 build 部署即可；
+> 在那之前可以用 `?api=你的網址` 臨時測試。
 
 ---
 
