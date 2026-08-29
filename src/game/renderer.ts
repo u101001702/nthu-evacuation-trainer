@@ -169,10 +169,9 @@ export function renderFloor(
 
   for (const a of map.areas) drawDoorPlates(ctx, a);
 
-  // 地標（只有靠近才看得到，符合「資訊有限」的設計）
+  // 地標（要夠近、而且要在視線內才看得到 —— 隔著牆感覺不到出口）
   for (const lm of map.landmarks) {
-    const d = Math.hypot(lm.x - opts.player.x, lm.y - opts.player.y);
-    if (d > LANDMARK_RANGE) continue;
+    if (!inSight(opts.player, opts.visPoly, lm.x, lm.y)) continue;
     const tone =
       lm.tone === 'exit' ? '#1f7a55' : lm.tone === 'warn' ? '#b4592a' : '#2f4a63';
     ctx.font = `700 16px ${FONT}`;
@@ -189,6 +188,28 @@ export function renderFloor(
   if (opts.debug) drawDebug(ctx, floor, opts);
 
   drawPlayer(ctx, opts.player, opts.facing);
+}
+
+/**
+ * 目標點是否在玩家目前的可視多邊形內。
+ * visPoly 是以等角射線取樣出來的星狀多邊形，所以只要比對同一個角度的
+ * 射線長度就夠了，不需要完整的 point-in-polygon。
+ */
+function inSight(player: Vec2, poly: Vec2[], tx: number, ty: number): boolean {
+  const dx = tx - player.x;
+  const dy = ty - player.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist > LANDMARK_RANGE) return false;
+  if (poly.length === 0) return dist <= LANDMARK_RANGE;
+
+  let ang = Math.atan2(dy, dx);
+  if (ang < 0) ang += Math.PI * 2;
+  const idx = Math.round((ang / (Math.PI * 2)) * poly.length) % poly.length;
+  const hit = poly[idx];
+  if (!hit) return false;
+  const rayLen = Math.hypot(hit.x - player.x, hit.y - player.y);
+  // 留一點寬容值，讓貼在牆上的標示牌本身不會被自己的牆擋掉
+  return dist <= rayLen + 10;
 }
 
 function drawPlayer(ctx: CanvasRenderingContext2D, p: Vec2, facing: number): void {

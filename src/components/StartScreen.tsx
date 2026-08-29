@@ -1,3 +1,5 @@
+import { VISIBILITY_METRES } from '../game/config';
+
 interface Props {
   onStart: () => void;
   nickname?: string;
@@ -20,7 +22,7 @@ export function StartScreen({ onStart, nickname }: Props) {
 
         <p className="briefing-body">
           請盡快找到安全路線，離開建築物。<br />
-          能見度極低，你只看得到身邊約 <b>2 公尺</b>。<br />
+          能見度極低，你只看得到身邊約 <b>{VISIBILITY_METRES} 公尺</b>。<br />
           沒有人會告訴你最佳路線 —— <b>你必須自行判斷方向</b>。
         </p>
 

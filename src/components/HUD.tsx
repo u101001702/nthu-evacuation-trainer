@@ -1,3 +1,4 @@
+import { VISIBILITY_METRES, VISIBILITY_RADIUS } from '../game/config';
 import { formatTime } from '../game/gameState';
 import type { HudSnapshot } from '../game/gameState';
 
@@ -59,7 +60,7 @@ export function HUD({ hud, muted, isTouch, onToggleMute, onInteract, onAscend }:
           <div>floor: {hud.floorName}</div>
           <div>area: {hud.locationLabel}</div>
           <div>x: {hud.playerX}　y: {hud.playerY}</div>
-          <div>visibility radius: 90 px（2 m）</div>
+          <div>visibility radius: {VISIBILITY_RADIUS} px（{VISIBILITY_METRES} m）</div>
           <div>distance: {hud.distanceM.toFixed(1)} m</div>
           <div>fps: {hud.fps}</div>
         </div>

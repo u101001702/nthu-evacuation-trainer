@@ -6,11 +6,24 @@
 /** 1 公尺 = 幾個遊戲像素 */
 export const PX_PER_M = 45;
 
-/** 玩家可視半徑（像素）。2 公尺 × 45 px/m = 90 px */
-export const VISIBILITY_RADIUS = 90;
+/**
+ * 玩家可視半徑（公尺）。
+ * 這是全案唯一的來源 —— HUD、開場說明、Debug 面板都從這裡推導，
+ * 想調難度只要改這一個數字。
+ *   2 m = 濃煙／完全無照明（最難）
+ *   5 m = 一般停電走廊，看得到眼前一小段（預設）
+ */
+export const VISIBILITY_METRES = 5;
 
-/** 相機縮放倍率（固定，確保地圖比例不因視窗大小變形） */
-export const ZOOM = 2.2;
+/** 玩家可視半徑（像素） */
+export const VISIBILITY_RADIUS = VISIBILITY_METRES * PX_PER_M;
+
+/**
+ * 相機縮放倍率（固定，確保地圖比例不因視窗大小變形）。
+ * 需要讓可視圓完整放進畫面：VISIBILITY_RADIUS × ZOOM 要小於畫面高度的一半。
+ * 225 px × 1.3 ≈ 292 px，1280×720 以上的螢幕都裝得下。
+ */
+export const ZOOM = 1.3;
 
 /** 玩家碰撞半徑（像素） */
 export const PLAYER_RADIUS = 13;
@@ -40,8 +53,8 @@ export const DEBUG_MODE = false;
 /** 樓層切換動畫時間（毫秒） */
 export const TRANSITION_MS = 900;
 
-/** 靠近多遠才會看到地標文字（像素） */
-export const LANDMARK_RANGE = 130;
+/** 靠近多遠才會看到地標文字（像素）。同時必須在視線內，不會穿牆 */
+export const LANDMARK_RANGE = VISIBILITY_RADIUS;
 
 /** 配色（Professional Emergency Training 風格） */
 export const COLORS = {
