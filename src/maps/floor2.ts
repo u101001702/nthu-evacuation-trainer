@@ -25,8 +25,9 @@ export const floor2: FloorMap = {
 
     /* ── 北側外圈 ──────────────────────────────────────────── */
     area('211', '211', 'room', 200, 200, 760, 590, [{ side: 'S', at: 600 }], 'Room 211'),
-    area('nw_lobby', '西北逃生梯前室', 'corridor', 760, 200, 1030, 590,
-      [{ side: 'S', at: 895 }, { side: 'N', at: 880, width: 200 }], 'NW Stair Lobby'),
+    area('nw_lobby', '走廊', 'corridor', 760, 200, 1030, 590,
+      [{ side: 'S', at: 895 }, { side: 'N', at: 880, width: 200 }],
+      'NW Stair Lobby', '西北逃生梯前室'),
     area('209B', '209B', 'room', 1030, 200, 1190, 590, [{ side: 'S', at: 1110, width: 90 }], 'Room 209B'),
     area('209A', '209A', 'room', 1190, 200, 1330, 590, [{ side: 'S', at: 1260, width: 90 }], 'Room 209A'),
     area('207', '207', 'room', 1330, 200, 1560, 590, [{ side: 'S', at: 1445 }], 'Room 207'),
@@ -87,8 +88,9 @@ export const floor2: FloorMap = {
     area('217lobby', '217 前室', 'corridor', 640, 1800, 760, 2100,
       [{ side: 'N', at: 700, width: 90 }, { side: 'W', at: 1875, width: 90 }, { side: 'W', at: 2025, width: 90 }],
       '217 Lobby'),
-    area('sw_lobby', '西南逃生梯前室', 'corridor', 760, 1800, 1030, 2100,
-      [{ side: 'N', at: 895 }, { side: 'S', at: 880, width: 200 }], 'SW Stair Lobby'),
+    area('sw_lobby', '走廊', 'corridor', 760, 1800, 1030, 2100,
+      [{ side: 'N', at: 895 }, { side: 'S', at: 880, width: 200 }],
+      'SW Stair Lobby', '西南逃生梯前室'),
     area('218', '218', 'room', 1030, 1800, 1170, 2100, [{ side: 'N', at: 1100, width: 90 }], 'Room 218'),
     area('220A', '220A', 'room', 1170, 1800, 1330, 2100, [{ side: 'N', at: 1250, width: 90 }], 'Room 220A'),
     area('220B', '220B', 'room', 1330, 1800, 1450, 2100, [{ side: 'N', at: 1390, width: 80 }], 'Room 220B'),

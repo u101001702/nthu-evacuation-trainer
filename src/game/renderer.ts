@@ -139,9 +139,12 @@ export function renderFloor(
       ctx.fillText('建築外 OUTSIDE', a.rect.x + a.rect.w / 2, a.rect.y + a.rect.h / 2);
       continue;
     }
+    // 走廊、大廳、前室不在地面標名稱 —— 學生要靠空間感判斷自己在哪，
+    // 不是靠地板上的字。目前位置仍會顯示在左上角 HUD。
+    if (a.kind === 'corridor') continue;
     const big = Math.min(a.rect.w, a.rect.h) > 150;
     ctx.font = `${big ? 600 : 500} ${big ? 20 : 14}px ${FONT}`;
-    ctx.fillStyle = a.kind === 'corridor' ? COLORS.label : COLORS.labelStrong;
+    ctx.fillStyle = COLORS.labelStrong;
     ctx.fillText(a.label, a.rect.x + a.rect.w / 2, a.rect.y + a.rect.h / 2);
   }
 
