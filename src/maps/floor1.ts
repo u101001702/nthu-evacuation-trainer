@@ -93,9 +93,6 @@ export const floor1: FloorMap = {
   ],
 
   landmarks: [
-    { x: 880, y: 260, text: '緊急出口 EXIT', tone: 'exit' },
-    { x: 880, y: 2040, text: '緊急出口 EXIT', tone: 'exit' },
-    { x: 2330, y: 1255, text: '緊急出口 EXIT', tone: 'exit' },
     { x: 2190, y: 1020, text: '樓梯 STAIRS', tone: 'stair' },
   ],
 };
