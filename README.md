@@ -64,7 +64,7 @@ src/maps/geometry.ts   ← 三層共用的樓梯 / 挑空 / 外牆座標
 | `PX_PER_M` | 45 | 1 公尺 = 幾像素 |
 | `VISIBILITY_METRES` | 5 | **可視半徑（公尺）— 調難度改這個就好**，HUD 與開場說明會自動同步 |
 | `ZOOM` | 1.3 | 相機縮放。改可視半徑時要一起調，讓亮圈裝得進畫面 |
-| `PLAYER_SPEED_MPS` | 2.0 | 移動速度（公尺/秒） |
+| `PLAYER_SPEED_MPS` | 3.2 | 移動速度（公尺/秒） |
 | `RAY_COUNT` | 220 | 視線射線數 |
 | `EXPLORED_DARKNESS` | 0.68 | 已探索區域殘留的黑幕 |
 | `DEBUG_MODE` | false | Debug 預設值 |

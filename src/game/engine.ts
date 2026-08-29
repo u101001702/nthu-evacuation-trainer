@@ -67,7 +67,7 @@ export class GameEngine {
     const a = areaAt(this.floor, this.player);
     if (a) {
       this.stats.visitedAreas.push(a.id);
-      this.stats.path.push(`3F ${a.label}`);
+      this.stats.path.push(`3F ${a.logName ?? a.label}`);
     }
   }
 
@@ -134,7 +134,7 @@ export class GameEngine {
     const a = areaAt(this.floor, this.player);
     if (!a) return;
     const floorName = this.floor.map.name;
-    const entry = `${floorName} ${a.label}`;
+    const entry = `${floorName} ${a.logName ?? a.label}`;
     if (this.stats.path[this.stats.path.length - 1] !== entry) this.stats.path.push(entry);
     if (!this.stats.visitedAreas.includes(a.id)) {
       this.stats.visitedAreas.push(a.id);

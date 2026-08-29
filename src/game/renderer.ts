@@ -67,28 +67,6 @@ function drawStairTreads(ctx: CanvasRenderingContext2D, a: AreaDef): void {
   ctx.restore();
 }
 
-/** 房號牌：畫在門的內側，模擬真實門牌 */
-function drawDoorPlates(ctx: CanvasRenderingContext2D, a: AreaDef): void {
-  if (!a.doors || a.kind === 'corridor' || a.kind === 'stair') return;
-  const { x, y, w, h } = a.rect;
-  ctx.save();
-  ctx.font = `600 13px ${FONT}`;
-  ctx.fillStyle = COLORS.labelStrong;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  for (const d of a.doors) {
-    const off = 22;
-    let px = 0;
-    let py = 0;
-    if (d.side === 'N') { px = d.at; py = y + off; }
-    else if (d.side === 'S') { px = d.at; py = y + h - off; }
-    else if (d.side === 'W') { px = x + off + 8; py = d.at; }
-    else { px = x + w - off - 8; py = d.at; }
-    ctx.fillText(a.label.split(' ')[0] ?? a.label, px, py);
-  }
-  ctx.restore();
-}
-
 export interface RenderOpts {
   player: Vec2;
   facing: number;
@@ -166,8 +144,6 @@ export function renderFloor(
     ctx.fillStyle = a.kind === 'corridor' ? COLORS.label : COLORS.labelStrong;
     ctx.fillText(a.label, a.rect.x + a.rect.w / 2, a.rect.y + a.rect.h / 2);
   }
-
-  for (const a of map.areas) drawDoorPlates(ctx, a);
 
   // 地標（要夠近、而且要在視線內才看得到 —— 隔著牆感覺不到出口）
   for (const lm of map.landmarks) {

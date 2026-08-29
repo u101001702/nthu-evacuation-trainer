@@ -45,9 +45,11 @@ export function area(
   y1: number,
   doors: DoorSpec[] = [],
   short?: string,
+  logName?: string,
 ): AreaDef {
   const def: AreaDef = { id, label, kind, rect: box(x0, y0, x1, y1), doors };
   if (short) def.short = short;
+  if (logName) def.logName = logName;
   return def;
 }
 
@@ -98,7 +100,7 @@ export function mainStairArea(): AreaDef {
   const r = ST_MAIN_RECT;
   return area(
     'st_main',
-    '主樓梯',
+    '樓梯',
     'stair',
     r.x,
     r.y,
@@ -106,5 +108,6 @@ export function mainStairArea(): AreaDef {
     r.y + r.h,
     [{ side: 'E', at: ST_MAIN_DOOR_Y }],
     'Main Stairwell',
+    '主樓梯',
   );
 }

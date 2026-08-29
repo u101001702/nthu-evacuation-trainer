@@ -44,6 +44,12 @@ export interface AreaDef {
   label: string;
   /** HUD 短標籤，例如「Room 310」 */
   short?: string;
+  /**
+   * 統計與逃生路徑紀錄用的名稱，預設等於 label。
+   * 樓梯在畫面上一律只寫「樓梯」，不讓學生看出哪一座是室外逃生梯；
+   * 但資料層仍要保留身分，教官看板的「撤離路徑選擇」才分得出來。
+   */
+  logName?: string;
   kind: AreaKind;
   rect: Rect;
   /** 有牆的區域才需要；走廊 / 大廳 / 室外不長牆 */

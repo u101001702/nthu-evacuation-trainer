@@ -28,8 +28,8 @@ export const ZOOM = 1.3;
 /** 玩家碰撞半徑（像素） */
 export const PLAYER_RADIUS = 13;
 
-/** 玩家移動速度（公尺/秒）→ 疏散時的實際步行速率 */
-export const PLAYER_SPEED_MPS = 2.0;
+/** 玩家移動速度（公尺/秒）→ 疏散時的快步移動 */
+export const PLAYER_SPEED_MPS = 3.2;
 export const PLAYER_SPEED = PLAYER_SPEED_MPS * PX_PER_M;
 
 /** 預設門洞寬度（像素）≈ 2.4 公尺 */

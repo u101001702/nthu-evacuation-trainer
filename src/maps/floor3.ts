@@ -71,12 +71,12 @@ export const floor3: FloorMap = {
     area('well', '挑空', 'well', WELL.x, WELL.y, WELL.x + WELL.w, WELL.y + WELL.h, [], 'Open Well'),
 
     /* ── 室外逃生梯塔 ──────────────────────────────────────── */
-    area('st_nw', '西北室外逃生梯', 'stair',
+    area('st_nw', '樓梯', 'stair',
       ST_NW_RECT.x, ST_NW_RECT.y, ST_NW_RECT.x + ST_NW_RECT.w, ST_NW_RECT.y + ST_NW_RECT.h,
-      [{ side: 'S', at: 880, width: 200 }], 'NW Escape Stairs'),
-    area('st_sw', '西南室外逃生梯', 'stair',
+      [{ side: 'S', at: 880, width: 200 }], 'NW Escape Stairs', '西北室外逃生梯'),
+    area('st_sw', '樓梯', 'stair',
       ST_SW_RECT.x, ST_SW_RECT.y, ST_SW_RECT.x + ST_SW_RECT.w, ST_SW_RECT.y + ST_SW_RECT.h,
-      [{ side: 'N', at: 880, width: 200 }], 'SW Escape Stairs'),
+      [{ side: 'N', at: 880, width: 200 }], 'SW Escape Stairs', '西南室外逃生梯'),
   ],
 
   extraWalls: [
