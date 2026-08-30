@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { VISIBILITY_METRES } from '../game/config';
 import type { SessionInfo } from '../game/session';
 
 interface Props {
@@ -9,15 +10,13 @@ interface Props {
 }
 
 export function SessionScreen({ initial, backendReady, pending, onConfirm }: Props) {
-  const [session, setSession] = useState(initial.session);
   const [nickname, setNickname] = useState(initial.nickname);
-
   const nicknameOk = nickname.trim().length > 0;
 
   const submit = (e: React.FormEvent): void => {
     e.preventDefault();
     if (!nicknameOk) return;
-    onConfirm(session.trim() || '未指定場次', nickname.trim());
+    onConfirm(initial.session, nickname.trim());
   };
 
   return (
@@ -26,24 +25,9 @@ export function SessionScreen({ initial, backendReady, pending, onConfirm }: Pro
         <div className="session-tag">EDUCATION BUILDING · EVACUATION TRAINER</div>
         <h1>教育館逃生訓練</h1>
         <p className="session-lead">
-          開始前先留下場次與暱稱，成績會上傳給教官做全班統計。<br />
+          取一個暱稱就可以開始。成績會上傳給教官做全班統計。<br />
           <b>不會收集真實姓名。</b>
         </p>
-
-        <label className="field">
-          <span className="field-label">
-            場次
-            {initial.locked && <em className="field-lock">已由教官指定</em>}
-          </span>
-          <input
-            type="text"
-            value={session}
-            readOnly={initial.locked}
-            onChange={(e) => setSession(e.target.value)}
-            placeholder="例：20260915 醫學系五年級"
-            maxLength={60}
-          />
-        </label>
 
         <label className="field">
           <span className="field-label">暱稱</span>
@@ -53,13 +37,21 @@ export function SessionScreen({ initial, backendReady, pending, onConfirm }: Pro
             onChange={(e) => setNickname(e.target.value)}
             placeholder="隨便取一個，自己認得就好"
             maxLength={20}
-            autoFocus={!initial.nickname}
+            autoFocus
           />
         </label>
 
+        <div className="session-meta">
+          <span className="session-meta-label">場次</span>
+          <span className="session-meta-value">{initial.session}</span>
+          {initial.locked && <em className="field-lock">教官指定</em>}
+        </div>
+
         <div className="session-status">
           {!backendReady && <span className="dim">— 尚未設定成績後端，這次不會上傳</span>}
-          {backendReady && pending > 0 && <span className="warn">⏳ 有 {pending} 筆舊成績待重傳，會在背景自動送出</span>}
+          {backendReady && pending > 0 && (
+            <span className="warn">⏳ 有 {pending} 筆舊成績待重傳，會在背景自動送出</span>
+          )}
           {backendReady && pending === 0 && <span className="ok">✓ 成績後端已連線</span>}
         </div>
 
@@ -68,7 +60,8 @@ export function SessionScreen({ initial, backendReady, pending, onConfirm }: Pro
         </button>
 
         <div className="session-hint">
-          教官：網址加 <code>?s=場次名稱</code> 可鎖定場次，加 <code>?dashboard</code> 開啟全班看板
+          能見度約 {VISIBILITY_METRES} 公尺，視線不穿牆。<br />
+          教官：網址加 <code>?s=場次名稱</code> 可指定場次，加 <code>?dashboard</code> 開啟全班看板
         </div>
       </form>
     </div>

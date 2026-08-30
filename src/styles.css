@@ -375,6 +375,16 @@ kbd {
 .field input:focus { outline: none; border-color: var(--accent); }
 .field input:read-only { color: var(--ink-dim); background: rgba(255, 255, 255, 0.02); }
 
+.session-meta {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 14px; margin-bottom: 16px;
+}
+.session-meta-label {
+  font-size: 10px; letter-spacing: 0.14em; color: var(--ink-dim); font-weight: 700;
+}
+.session-meta-value { font-family: var(--mono); font-size: 14px; color: var(--ink); }
+
 .session-status { font-size: 12px; margin-bottom: 18px; min-height: 18px; }
 .session-status .ok { color: var(--safe); }
 .session-status .warn { color: #e0a63c; }
