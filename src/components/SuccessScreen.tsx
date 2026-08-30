@@ -1,3 +1,5 @@
+import { Leaderboard } from './Leaderboard';
+import type { ScoreRecord } from '../data/types';
 import { formatTime, metres } from '../game/gameState';
 import type { GameStats } from '../game/gameState';
 import type { SessionInfo } from '../game/session';
@@ -7,6 +9,8 @@ interface Props {
   stats: GameStats;
   identity: SessionInfo;
   scoreCode: string | null;
+  /** 這次的成績，用來算排行榜名次 */
+  record: ScoreRecord | null;
   upload: UploadState;
   onRetryUpload: () => void;
   onRestart: () => void;
@@ -14,7 +18,7 @@ interface Props {
 }
 
 export function SuccessScreen({
-  stats, identity, scoreCode, upload, onRetryUpload, onRestart, onChangeIdentity,
+  stats, identity, scoreCode, record, upload, onRetryUpload, onRestart, onChangeIdentity,
 }: Props) {
   const total = (stats.endedAt ?? Date.now()) - stats.startedAt;
   const path = compressPath(stats.path);
@@ -47,6 +51,14 @@ export function SuccessScreen({
           scoreCode={scoreCode}
           onRetry={onRetryUpload}
         />
+
+        {record && (
+          <Leaderboard
+            mine={record}
+            session={identity.session}
+            uploadStatus={upload.status}
+          />
+        )}
 
         <div className="decision">
           <div className="decision-title">你的逃生決策</div>

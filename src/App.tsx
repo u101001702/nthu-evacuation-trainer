@@ -8,7 +8,7 @@ import { FloorTransition } from './components/FloorTransition';
 import { GameEngine, type TransitionState } from './game/engine';
 import { metres, type GameStats, type HudSnapshot } from './game/gameState';
 import { loadSession, saveSession, type SessionInfo } from './game/session';
-import { makeScoreCode, UploadService, type UploadState } from './game/upload';
+import { makeScoreCode, UploadService, type ResultPayload, type UploadState } from './game/upload';
 import { isBackendConfigured } from './config/backend';
 
 type UiPhase = 'session' | 'briefing' | 'playing' | 'escaped';
@@ -28,6 +28,7 @@ export default function App() {
   const [transition, setTransition] = useState<TransitionState | null>(null);
   const [finalStats, setFinalStats] = useState<GameStats | null>(null);
   const [scoreCode, setScoreCode] = useState<string | null>(null);
+  const [lastRecord, setLastRecord] = useState<ResultPayload | null>(null);
   const [uploadState, setUploadState] = useState<UploadState>(upload.getState());
   const [muted, setMuted] = useState(false);
 
@@ -53,6 +54,7 @@ export default function App() {
     engine.reset();
     setFinalStats(null);
     setScoreCode(null);
+    setLastRecord(null);
     setPhase('briefing');
     setTransition(null);
   }, [engine]);
@@ -70,7 +72,7 @@ export default function App() {
       setPhase('escaped');
 
       const id = identityRef.current;
-      upload.submit({
+      const record: ResultPayload = {
         code,
         session: id.session || '未指定場次',
         nickname: id.nickname || '匿名',
@@ -81,7 +83,9 @@ export default function App() {
         areasVisited: snapshot.visitedAreas.length,
         wrongTurns: snapshot.wrongTurns,
         route: snapshot.path.join('→').slice(0, 500),
-      });
+      };
+      setLastRecord(record);
+      upload.submit(record);
     };
     engine.input.onRestart = () => restart();
     return () => {
@@ -142,6 +146,7 @@ export default function App() {
           stats={finalStats}
           identity={identity}
           scoreCode={scoreCode}
+          record={lastRecord}
           upload={uploadState}
           onRetryUpload={() => void upload.flush()}
           onRestart={restart}

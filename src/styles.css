@@ -518,3 +518,54 @@ kbd {
   font-size: 11px; color: var(--ink-dim); margin-top: 6px;
   font-family: var(--mono);
 }
+
+/* ── 成功畫面的本場次排行榜 ───────────────────────────────── */
+
+.leaderboard {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 15px 16px 10px;
+  margin-bottom: 20px;
+}
+
+.leaderboard-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px;
+  margin-bottom: 10px;
+}
+.leaderboard-title {
+  font-size: 11px; letter-spacing: 0.13em; color: var(--ink-dim); font-weight: 700;
+}
+.leaderboard-sub { font-size: 11px; color: var(--ink-dim); }
+
+.leaderboard-list { list-style: none; margin: 0; padding: 0; }
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 7px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.leaderboard-row.me {
+  background: rgba(61, 139, 253, 0.16);
+  outline: 1px solid rgba(61, 139, 253, 0.45);
+}
+
+.lb-rank { font-family: var(--mono); color: var(--accent); font-weight: 700; text-align: right; }
+.lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-you {
+  font-style: normal; font-size: 10px; margin-left: 8px;
+  background: var(--accent); color: #fff; border-radius: 3px; padding: 1px 6px;
+}
+.lb-time { font-family: var(--mono); font-weight: 600; }
+.lb-dist { font-family: var(--mono); color: var(--ink-dim); min-width: 52px; text-align: right; }
+
+.leaderboard-gap {
+  text-align: center; color: var(--ink-dim); font-size: 12px;
+  padding: 2px 0; letter-spacing: 0.3em;
+}
+.leaderboard-note {
+  font-size: 11px; color: var(--ink-dim); padding: 6px 8px 2px; line-height: 1.8;
+}
