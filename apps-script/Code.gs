@@ -43,7 +43,10 @@ function jsonOut_(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-/** 第一次安裝時執行一次，建立表頭 */
+/**
+ * 第一次安裝時執行一次，建立表頭。
+ * 重複執行也安全 —— 欄位格式每次都會重新套用。
+ */
 function setupHeaders() {
   const sheet = getSheet_();
   if (sheet.getLastRow() === 0) {
@@ -54,6 +57,20 @@ function setupHeaders() {
       .setFontColor('#ffffff');
     sheet.setFrozenRows(1);
   }
+  applyColumnFormats_(sheet);
+}
+
+/**
+ * 把文字欄位強制設成「純文字」格式。
+ *
+ * ⚠️ 這一步很重要：像「2026-08-30」這種場次名稱，試算表預設會自動判定成
+ * 日期並轉成日期值，讀回來就變成一串 "Sun Aug 30 2026 00:00:00 GMT+..."。
+ * B 場次 / C 暱稱 / D 出口 / J 路線 / K 成績代碼 一律設為純文字。
+ */
+function applyColumnFormats_(sheet) {
+  sheet.getRange('A:A').setNumberFormat('yyyy-mm-dd hh:mm:ss'); // 時間戳
+  sheet.getRange('B:D').setNumberFormat('@');                    // 場次 / 暱稱 / 出口
+  sheet.getRange('J:K').setNumberFormat('@');                    // 路線 / 成績代碼
 }
 
 /**
@@ -76,7 +93,8 @@ function doGet(e) {
       if (wanted && String(v[1]) !== wanted) continue;
       rows.push({
         time: formatCell_(v[0]),
-        session: String(v[1] || ''),
+        // 舊資料的場次可能已被試算表轉成日期值，讀取時還原成 yyyy-MM-dd
+        session: formatDateish_(v[1]),
         nickname: String(v[2] || ''),
         exit: String(v[3] || ''),
         seconds: Number(v[4]) || 0,
@@ -94,8 +112,22 @@ function doGet(e) {
   }
 }
 
+/**
+ * 時間欄一律以台北時間輸出。
+ *
+ * 不用 `v instanceof Date` —— Apps Script 跨執行環境時這個判斷可能失效，
+ * 改用 duck typing 比較可靠。
+ */
+/** 若值是日期就輸出 yyyy-MM-dd，否則原樣輸出字串 */
+function formatDateish_(v) {
+  if (v && typeof v.getTime === 'function' && !isNaN(v.getTime())) {
+    return Utilities.formatDate(v, 'Asia/Taipei', 'yyyy-MM-dd');
+  }
+  return String(v || '');
+}
+
 function formatCell_(v) {
-  if (v instanceof Date) {
+  if (v && typeof v.getTime === 'function' && !isNaN(v.getTime())) {
     return Utilities.formatDate(v, 'Asia/Taipei', 'yyyy-MM-dd HH:mm:ss');
   }
   return String(v || '');
@@ -116,7 +148,8 @@ function doPost(e) {
       return jsonOut_({ success: false, error: 'Unknown action: ' + data.action });
     }
     const r = data.result || {};
-    if (!r.code) return jsonOut_({ success: false, error: 'missing code' });
+    const bad = validate_(r);
+    if (bad) return jsonOut_({ success: false, error: bad });
 
     const sheet = getSheet_();
     if (sheet.getLastRow() === 0) setupHeaders();
@@ -125,9 +158,11 @@ function doPost(e) {
       return jsonOut_({ success: true, duplicate: true });
     }
 
-    const timestamp = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd HH:mm:ss');
+    // 寫入真正的時間點（Date 物件），不要寫格式化過的字串。
+    // 寫字串會被試算表依「試算表時區」重新解讀，導致時區被套用兩次。
+    // 讀取時再由 formatCell_ 統一格式化成台北時間。
     sheet.appendRow([
-      timestamp,
+      new Date(),
       String(r.session || '未指定'),
       String(r.nickname || '匿名'),
       String(r.exit || ''),
@@ -148,6 +183,25 @@ function doPost(e) {
   }
 }
 
+/**
+ * 基本資料驗證。
+ *
+ * 這個 Web App 的存取權是「所有人」，網址一旦部署到公開網站就是公開的
+ * —— 這是純前端網站無法避免的。驗證擋不了刻意搗亂，但可以擋掉格式錯誤的
+ * 垃圾資料，維持資料品質。真的被灌水時用 clearAllScores() 清掉重來。
+ */
+function validate_(r) {
+  if (!r.code || String(r.code).length > 20) return 'invalid code';
+  if (!r.nickname || String(r.nickname).length > 40) return 'invalid nickname';
+  if (String(r.session || '').length > 80) return 'invalid session';
+  if (String(r.route || '').length > 1000) return 'route too long';
+  const secs = Number(r.seconds);
+  if (!isFinite(secs) || secs < 1 || secs > 7200) return 'invalid seconds';
+  const dist = Number(r.distanceM);
+  if (!isFinite(dist) || dist < 0 || dist > 20000) return 'invalid distance';
+  return null;
+}
+
 /** 只掃最後 800 列，避免資料一多就變慢 */
 function findCodeRow_(sheet, code) {
   const lastRow = sheet.getLastRow();
@@ -159,4 +213,16 @@ function findCodeRow_(sheet, code) {
     if (String(codes[i][0]) === code) return start + i;
   }
   return 0;
+}
+
+/**
+ * 維護用：清空所有成績，保留表頭。
+ * 要用的時候在編輯器選這個函式按「執行」。測試資料或跨學期歸零時使用。
+ * ⚠️ 資料會直接消失，執行前請先「檔案 → 建立副本」備份。
+ */
+function clearAllScores() {
+  const sheet = getSheet_();
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) sheet.deleteRows(2, lastRow - 1);
+  applyColumnFormats_(sheet);
 }

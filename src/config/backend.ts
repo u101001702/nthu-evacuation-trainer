@@ -9,8 +9,9 @@
  * 沒設定時上傳功能會自動停用，遊戲照常可玩，不會報錯。
  */
 
-/** ⬇️ 把 Apps Script 部署後拿到的「網頁應用程式」網址貼在這裡 */
-export const BUILT_IN_API_URL = '';
+/** ⬇️ Apps Script 部署後的「網頁應用程式」網址 */
+export const BUILT_IN_API_URL =
+  'https://script.google.com/macros/s/AKfycbzjr6nbZeUEnKMoX45H__oD8WxOUXN7FBp3Om0Jz0ag9wR-DhOL0Fg-V4ctTO-1yDY/exec';
 
 const LS_KEY = 'evac_api';
 
