@@ -513,3 +513,8 @@ kbd {
   .dash-grid { grid-template-columns: 1fr; }
   .dash-head h1 { font-size: 21px; }
 }
+
+.dash-source {
+  font-size: 11px; color: var(--ink-dim); margin-top: 6px;
+  font-family: var(--mono);
+}

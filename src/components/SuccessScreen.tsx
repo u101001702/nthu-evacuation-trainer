@@ -87,9 +87,9 @@ function UploadBar({
   return (
     <div className={`upload-bar ${status}`}>
       <div className="upload-main">
-        {status === 'disabled' && <span>— 尚未設定成績後端，這次成績只留在本機</span>}
+        {status === 'local' && <span>✓ 成績已存在這台裝置（尚未連線後端）</span>}
         {status === 'sending' && <span>⏳ 上傳中…</span>}
-        {status === 'ok' && <span>✓ 成績已上傳給教官</span>}
+        {status === 'ok' && <span>✓ 成績已上傳給教官 · {upload.storeLabel}</span>}
         {status === 'idle' && <span>⏳ 準備上傳…</span>}
         {status === 'queued' && (
           <span>

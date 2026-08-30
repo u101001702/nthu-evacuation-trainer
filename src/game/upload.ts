@@ -1,26 +1,18 @@
-import { isBackendConfigured, resolveApiUrl } from '../config/backend';
+import { getScoreStore } from '../data/scoreStore';
+import type { ScoreRecord } from '../data/types';
 
-export interface ResultPayload {
-  /** 成績代碼，同時是後端的冪等鍵 */
-  code: string;
-  session: string;
-  nickname: string;
-  exit: string;
-  seconds: number;
-  distanceM: number;
-  floorChanges: number;
-  areasVisited: number;
-  wrongTurns: number;
-  route: string;
-}
+/** 沿用舊名稱，避免呼叫端大改；實際形狀就是 ScoreRecord */
+export type ResultPayload = ScoreRecord;
 
-export type UploadStatus = 'disabled' | 'idle' | 'sending' | 'ok' | 'queued';
+export type UploadStatus = 'local' | 'idle' | 'sending' | 'ok' | 'queued';
 
 export interface UploadState {
   status: UploadStatus;
   /** 還沒送出去的筆數 */
   pending: number;
   error: string | null;
+  /** 目前資料存在哪（Google Sheet / 本機） */
+  storeLabel: string;
 }
 
 const QUEUE_KEY = 'evac_pending_v1';
@@ -53,37 +45,25 @@ function writeQueue(items: ResultPayload[]): void {
 }
 
 /**
- * 送出一筆成績。
- * 用 text/plain 避開 CORS preflight —— Apps Script 不接受 OPTIONS。
- */
-async function postResult(item: ResultPayload): Promise<void> {
-  const url = resolveApiUrl();
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'submit', result: item }),
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = (await res.json()) as { success?: boolean; error?: string };
-  if (!data.success) throw new Error(data.error ?? '後端回報失敗');
-}
-
-/**
  * 上傳服務：先入佇列再送，送失敗就留著，下次開遊戲自動再試。
- * 因為後端以成績代碼做冪等判斷，重複送出不會產生重複資料。
+ *
+ * 這一層完全不知道資料最後存到哪裡 —— 只認識 ScoreStore 介面。
+ * 因為 store 保證以成績代碼做冪等判斷，重複送出不會產生重複資料。
  */
 export class UploadService {
   private listeners = new Set<(s: UploadState) => void>();
-  private state: UploadState = { status: 'idle', pending: 0, error: null };
+  private state: UploadState;
   private sending = false;
   private retryIndex = 0;
   private retryTimer: number | null = null;
 
   constructor() {
+    const store = getScoreStore();
     this.state = {
-      status: isBackendConfigured() ? 'idle' : 'disabled',
+      status: store.id === 'local' ? 'local' : 'idle',
       pending: readQueue().length,
       error: null,
+      storeLabel: store.label,
     };
   }
 
@@ -119,25 +99,32 @@ export class UploadService {
   /** 嘗試把佇列清空 */
   async flush(): Promise<void> {
     if (this.sending) return;
-    if (!isBackendConfigured()) {
-      this.emit({ status: 'disabled', pending: readQueue().length, error: null });
-      return;
-    }
+
+    const store = getScoreStore();
     const queue = readQueue();
     if (queue.length === 0) {
-      this.emit({ status: this.state.status === 'ok' ? 'ok' : 'idle', pending: 0, error: null });
+      this.emit({
+        status: store.id === 'local' ? 'local' : this.state.status === 'ok' ? 'ok' : 'idle',
+        pending: 0,
+        error: null,
+        storeLabel: store.label,
+      });
       return;
     }
 
     this.sending = true;
-    this.emit({ status: 'sending', pending: queue.length, error: null });
+    this.emit({ status: 'sending', pending: queue.length, error: null, storeLabel: store.label });
     try {
       for (const item of queue) {
-        await postResult(item);
+        await store.submit(item);
         writeQueue(readQueue().filter((x) => x.code !== item.code));
       }
       this.retryIndex = 0;
-      this.emit({ status: 'ok', pending: 0, error: null });
+      this.emit({
+        status: store.id === 'local' ? 'local' : 'ok',
+        pending: 0,
+        error: null,
+      });
     } catch (err) {
       this.emit({
         status: 'queued',

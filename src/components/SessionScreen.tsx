@@ -48,7 +48,7 @@ export function SessionScreen({ initial, backendReady, pending, onConfirm }: Pro
         </div>
 
         <div className="session-status">
-          {!backendReady && <span className="dim">— 尚未設定成績後端，這次不會上傳</span>}
+          {!backendReady && <span className="dim">— 未連線後端，成績會存在這台裝置</span>}
           {backendReady && pending > 0 && (
             <span className="warn">⏳ 有 {pending} 筆舊成績待重傳，會在背景自動送出</span>
           )}

@@ -87,6 +87,26 @@ React 18 · TypeScript (strict) · Vite 5 · HTML5 Canvas 2D · WebAudio
 | `index.html?dashboard` | 教官看板（全班分布，可直接投影） |
 | `index.html?api=網址` | 臨時指定成績後端，會存進 localStorage |
 
+### 資料層架構
+
+遊戲與看板只認識 `src/data/scoreStore.ts` 的 `ScoreStore` 介面，
+不知道背後是什麼。目前有兩個實作：
+
+```
+src/data/
+├─ types.ts                    ScoreRecord / StoredScore（＝ Sheet 的 11 欄）
+├─ scoreStore.ts               ScoreStore 介面 + getScoreStore()
+└─ stores/
+   ├─ googleSheetStore.ts      Apps Script（有設定後端時使用）
+   └─ localStore.ts            localStorage（沒設定後端時的退路）
+```
+
+**要換成別的資料庫**（Supabase / Postgres / Firebase）時：
+新增一個 `stores/xxxStore.ts` 實作同一個介面，在 `getScoreStore()` 加一個分支即可。
+`upload.ts`、`Dashboard.tsx`、遊戲引擎、離線佇列、成績代碼機制**一行都不用改**。
+
+沒設定後端時成績會存在瀏覽器本機，看板也讀得到 —— 部署前就能先確認看板長什麼樣。
+
 ### 一次性設定（焜哥做）
 
 1. 開一個 Google Sheet，新增分頁 **`逃生成績`**

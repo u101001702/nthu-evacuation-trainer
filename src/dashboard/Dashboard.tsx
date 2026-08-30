@@ -1,23 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { isBackendConfigured, resolveApiUrl } from '../config/backend';
+import { getScoreStore } from '../data/scoreStore';
+import type { StoredScore } from '../data/types';
 import { formatTime } from '../game/gameState';
 import { BarList, Histogram, Scatter, type BarItem, type Point } from './charts';
 
-export interface ScoreRow {
-  time: string;
-  session: string;
-  nickname: string;
-  exit: string;
-  seconds: number;
-  distanceM: number;
-  floorChanges: number;
-  areasVisited: number;
-  wrongTurns: number;
-  route: string;
-  code: string;
-}
+/** 沿用舊名稱，形狀就是資料層的 StoredScore */
+export type ScoreRow = StoredScore;
 
-type LoadState = 'unconfigured' | 'loading' | 'ok' | 'error';
+type LoadState = 'local' | 'loading' | 'ok' | 'error';
 
 const REFRESH_MS = 15000;
 const ALL = '全部場次';
@@ -37,8 +27,9 @@ export function classifyRoute(row: ScoreRow): string {
 }
 
 export function Dashboard() {
+  const store = useMemo(() => getScoreStore(), []);
   const [rows, setRows] = useState<ScoreRow[]>([]);
-  const [state, setState] = useState<LoadState>(isBackendConfigured() ? 'loading' : 'unconfigured');
+  const [state, setState] = useState<LoadState>('loading');
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<string>(ALL);
   const [auto, setAuto] = useState(true);
@@ -46,24 +37,17 @@ export function Dashboard() {
   const timerRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
-    if (!isBackendConfigured()) {
-      setState('unconfigured');
-      return;
-    }
     try {
-      const res = await fetch(resolveApiUrl(), { method: 'GET' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { success?: boolean; rows?: ScoreRow[]; error?: string };
-      if (!data.success) throw new Error(data.error ?? '後端回報失敗');
-      setRows(data.rows ?? []);
-      setState('ok');
+      const data = await store.list();
+      setRows(data);
+      setState(store.id === 'local' ? 'local' : 'ok');
       setError(null);
       setUpdatedAt(new Date().toLocaleTimeString('zh-TW', { hour12: false }));
     } catch (err) {
       setState('error');
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [store]);
 
   useEffect(() => {
     void load();
@@ -126,6 +110,7 @@ export function Dashboard() {
         <div>
           <div className="dash-kicker">EDUCATION BUILDING · EVACUATION TRAINER</div>
           <h1>全班逃生表現看板</h1>
+          <div className="dash-source">資料來源：{store.label}</div>
         </div>
         <div className="dash-controls">
           <select value={session} onChange={(e) => setSession(e.target.value)}>
@@ -142,14 +127,16 @@ export function Dashboard() {
         </div>
       </header>
 
-      {state === 'unconfigured' && (
+      {state === 'local' && (
         <Notice tone="warn">
-          尚未設定成績後端。請先依 <code>apps-script/Code.gs</code> 的說明部署 Apps Script，
-          再把網址填進 <code>src/config/backend.ts</code>，或在網址加 <code>?api=你的網址</code>。
+          目前顯示的是<b>這台裝置</b>的本機紀錄，還沒連上 Google Sheet。
+          依 <code>apps-script/Code.gs</code> 的說明部署 Apps Script 後，
+          把網址填進 <code>src/config/backend.ts</code>（或在網址加 <code>?api=你的網址</code>），
+          就會改讀全班資料。
         </Notice>
       )}
       {state === 'error' && <Notice tone="error">讀取失敗：{error}</Notice>}
-      {state === 'ok' && filtered.length === 0 && (
+      {(state === 'ok' || state === 'local') && filtered.length === 0 && (
         <Notice tone="dim">這個場次還沒有人完成。學生跑完就會自動出現在這裡。</Notice>
       )}
 
