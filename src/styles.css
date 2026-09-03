@@ -143,6 +143,112 @@ body {
 
 @keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } }
 
+/* ── 火場與濃煙 ───────────────────────────────────────────── */
+
+.hud-prompt.blocked {
+  background: rgba(224, 90, 60, 0.18);
+  border-color: rgba(224, 90, 60, 0.7);
+  color: #ffbfae;
+}
+
+.hud-smoke {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 150px);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(120, 128, 137, 0.22);
+  border: 1px solid rgba(190, 198, 206, 0.42);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #d7dee5;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  animation: rise 0.25s ease-out;
+}
+.hud-smoke-icon { font-size: 16px; opacity: 0.85; }
+
+/* 火場耐受度條：滿格是安全，燒到見底就失敗 */
+.fire-alarm {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, 60vw);
+  pointer-events: none;
+  z-index: 3;
+  animation: rise 0.14s ease-out;
+}
+.fire-alarm-text {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #ffd0be;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  margin-bottom: 7px;
+  animation: flash 0.55s ease-in-out infinite alternate;
+}
+.fire-alarm-bar {
+  height: 9px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 160, 120, 0.5);
+  overflow: hidden;
+}
+.fire-alarm-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #a5261a, #f4722b 60%, #ffe08a);
+  transition: width 0.08s linear;
+}
+
+@keyframes flash { from { opacity: 0.55; } to { opacity: 1; } }
+
+/* 逼近火場時畫面邊緣泛紅 —— 周邊視覺的警告，不遮擋中央 */
+.fire-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(180, 50, 20, 0) 42%,
+    rgba(180, 50, 20, 0.55) 78%,
+    rgba(120, 25, 10, 0.85) 100%
+  );
+  transition: opacity 0.2s linear;
+}
+
+/* ── 訓練失敗畫面 ─────────────────────────────────────────── */
+
+.rule-alert { background: var(--alert); }
+
+.fail-en {
+  font-size: 30px; letter-spacing: 0.22em; color: var(--alert);
+  margin: 0; font-weight: 800;
+}
+.fail-zh { font-size: 22px; margin: 6px 0 4px; font-weight: 700; }
+
+.fail-where {
+  border-left: 3px solid var(--alert);
+  padding: 10px 0 10px 16px;
+  margin: 0 0 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.fail-where-label { font-size: 11px; color: var(--ink-dim); letter-spacing: 0.14em; }
+.fail-where strong { font-size: 21px; font-weight: 700; }
+.fail-where span { font-size: 13px; color: var(--ink-dim); }
+
+.btn-retry { background: var(--alert); }
+.btn-retry:hover { background: #ef7457; }
+
 .hud-debug {
   top: 150px;
   left: 14px;
@@ -197,6 +303,7 @@ kbd {
 .overlay {
   position: absolute;
   inset: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -236,6 +343,21 @@ kbd {
 
 .briefing-body { line-height: 2; color: #c9d3dc; font-size: 15px; margin: 0 0 20px; }
 .briefing-body b { color: var(--ink); }
+
+.briefing-rules {
+  list-style: none;
+  padding: 14px 16px;
+  margin: 0 0 20px;
+  border: 1px solid rgba(224, 90, 60, 0.35);
+  border-left: 3px solid var(--alert);
+  border-radius: 6px;
+  background: rgba(224, 90, 60, 0.07);
+  font-size: 14px;
+  line-height: 1.85;
+  color: #c9d3dc;
+}
+.briefing-rules li + li { margin-top: 8px; }
+.briefing-rules b { color: var(--ink); }
 
 .ooda {
   display: flex;
@@ -321,6 +443,7 @@ kbd {
 /* ── 樓層切換 ─────────────────────────────────────────────── */
 
 .transition {
+  z-index: 8;
   position: absolute;
   inset: 0;
   background: #05070b;

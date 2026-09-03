@@ -1,4 +1,4 @@
-import { VISIBILITY_METRES, VISIBILITY_RADIUS } from '../game/config';
+import { SMOKE_VISIBILITY_METRES, VISIBILITY_METRES } from '../game/config';
 import { formatTime } from '../game/gameState';
 import type { HudSnapshot } from '../game/gameState';
 
@@ -32,11 +32,43 @@ export function HUD({ hud, muted, isTouch, onToggleMute, onInteract, onAscend }:
         </button>
       </div>
 
-      {hud.prompt && (hud.prompt.down || hud.prompt.up) && (
+      {hud.prompt?.blocked && (
+        <div className="hud-prompt blocked">
+          <span>⛔ 這座樓梯已被火勢封閉 · 另尋出路</span>
+        </div>
+      )}
+
+      {hud.prompt && !hud.prompt.blocked && (hud.prompt.down || hud.prompt.up) && (
         <div className="hud-prompt">
           {hud.prompt.down && <span><kbd>E</kbd> {hud.prompt.down}</span>}
           {hud.prompt.up && <span><kbd>Q</kbd> {hud.prompt.up}</span>}
         </div>
+      )}
+
+      {/* 進了濃煙才會出現，提醒學生「看不見不是壞掉，是煙」 */}
+      {hud.inSmoke && (
+        <div className="hud-smoke">
+          <span className="hud-smoke-icon">🌫</span>
+          濃煙中 · 能見度剩約 {SMOKE_VISIBILITY_METRES} 公尺 · 放低姿勢前進
+        </div>
+      )}
+
+      {/* 火場耐受度：一離開火就會回充，讓學生看得出退回來是有用的 */}
+      {hud.fireExposure > 0 && (
+        <div className="fire-alarm">
+          <div className="fire-alarm-text">🔥 火場中 · 立刻退出</div>
+          <div className="fire-alarm-bar">
+            <i style={{ width: `${(1 - hud.fireExposure) * 100}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* 逼近火場時整個畫面邊緣泛紅，不用低頭看儀表也知道 */}
+      {hud.fireProximity > 0 && (
+        <div
+          className="fire-vignette"
+          style={{ opacity: 0.15 + hud.fireProximity * 0.75 }}
+        />
       )}
 
       <div className="hud hud-bottom">
@@ -60,7 +92,13 @@ export function HUD({ hud, muted, isTouch, onToggleMute, onInteract, onAscend }:
           <div>floor: {hud.floorName}</div>
           <div>area: {hud.locationLabel}</div>
           <div>x: {hud.playerX}　y: {hud.playerY}</div>
-          <div>visibility radius: {VISIBILITY_RADIUS} px（{VISIBILITY_METRES} m）</div>
+          <div>
+            sight radius: {hud.sightRadius.toFixed(0)} px（
+            {(hud.sightRadius / 45).toFixed(1)} m / 常態 {VISIBILITY_METRES} m）
+          </div>
+          <div>in smoke: {hud.inSmoke ? 'YES' : 'no'}</div>
+          <div>fire proximity: {hud.fireProximity.toFixed(2)}</div>
+          <div>fire exposure: {(hud.fireExposure * 100).toFixed(0)}%</div>
           <div>distance: {hud.distanceM.toFixed(1)} m</div>
           <div>fps: {hud.fps}</div>
         </div>

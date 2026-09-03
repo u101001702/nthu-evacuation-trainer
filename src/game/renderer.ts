@@ -1,4 +1,5 @@
-import { COLORS, DOOR_WIDTH, LANDMARK_RANGE, VISIBILITY_RADIUS, WALL_THICKNESS } from './config';
+import { COLORS, DOOR_WIDTH, WALL_THICKNESS } from './config';
+import type { ActiveFire } from './hazard';
 import type { AreaDef, Vec2 } from './types';
 import type { CompiledFloor } from './mapBuilder';
 
@@ -73,6 +74,73 @@ export interface RenderOpts {
   visPoly: Vec2[];
   debug: boolean;
   fogEnabled: boolean;
+  /** 目前的火場（含即時半徑） */
+  fires: ActiveFire[];
+  /** 目前實際可視半徑 —— 進了濃煙會縮短，地標判定也要跟著縮 */
+  sightRadius: number;
+  /** 開場後經過的毫秒，用來讓火焰擺動 */
+  timeMs: number;
+}
+
+/**
+ * 濃煙：一層灰白的半透明蓋子，中央濃、邊緣淡。
+ * 畫在房間填色之上、牆之下，看起來才像是煙浮在走廊裡而不是地板變色。
+ */
+function drawSmoke(ctx: CanvasRenderingContext2D, floor: CompiledFloor): void {
+  const smoke = floor.map.hazards?.smoke;
+  if (!smoke?.length) return;
+  ctx.save();
+  for (const s of smoke) {
+    const { x, y, w, h } = s.rect;
+    const g = ctx.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, 'rgba(120,126,133,0.35)');
+    g.addColorStop(0.5, 'rgba(141,148,156,0.78)');
+    g.addColorStop(1, 'rgba(120,126,133,0.35)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w, h);
+  }
+  ctx.restore();
+}
+
+/**
+ * 火焰：核心亮黃 → 橘 → 暗紅邊緣的徑向漸層，外圈再加一層抖動的熱氣。
+ * 邊緣用不規則的多邊形而不是正圓，免得看起來像一顆貼紙。
+ */
+function drawFire(ctx: CanvasRenderingContext2D, fires: ActiveFire[], timeMs: number): void {
+  if (!fires.length) return;
+  const t = timeMs / 1000;
+  ctx.save();
+  for (const f of fires) {
+    // 外圈熱氣
+    const halo = ctx.createRadialGradient(f.x, f.y, f.r * 0.6, f.x, f.y, f.r * 1.45);
+    halo.addColorStop(0, 'rgba(180,70,30,0.35)');
+    halo.addColorStop(1, 'rgba(180,70,30,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.r * 1.45, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 火本體：邊緣隨時間擺動的鋸齒圓
+    ctx.beginPath();
+    const lobes = 13;
+    for (let i = 0; i <= lobes; i++) {
+      const ang = (i / lobes) * Math.PI * 2;
+      const wobble = 1 + 0.09 * Math.sin(ang * 3 + t * 5.5) + 0.05 * Math.sin(ang * 7 - t * 3.1);
+      const rr = f.r * wobble;
+      const px = f.x + Math.cos(ang) * rr;
+      const py = f.y + Math.sin(ang) * rr;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    const core = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r);
+    core.addColorStop(0, COLORS.fireCore);
+    core.addColorStop(0.45, COLORS.fireMid);
+    core.addColorStop(1, COLORS.fireEdge);
+    ctx.fillStyle = core;
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 export function renderFloor(
@@ -100,6 +168,10 @@ export function renderFloor(
     ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // 濃煙與火（畫在地板之上、牆之下）
+  drawSmoke(ctx, floor);
+  drawFire(ctx, opts.fires, opts.timeMs);
 
   // 門檻
   ctx.strokeStyle = COLORS.doorway;
@@ -150,7 +222,7 @@ export function renderFloor(
 
   // 地標（要夠近、而且要在視線內才看得到 —— 隔著牆感覺不到出口）
   for (const lm of map.landmarks) {
-    if (!inSight(opts.player, opts.visPoly, lm.x, lm.y)) continue;
+    if (!inSight(opts.player, opts.visPoly, lm.x, lm.y, opts.sightRadius)) continue;
     const tone =
       lm.tone === 'exit' ? '#1f7a55' : lm.tone === 'warn' ? '#b4592a' : '#2f4a63';
     ctx.font = `700 16px ${FONT}`;
@@ -174,12 +246,14 @@ export function renderFloor(
  * visPoly 是以等角射線取樣出來的星狀多邊形，所以只要比對同一個角度的
  * 射線長度就夠了，不需要完整的 point-in-polygon。
  */
-function inSight(player: Vec2, poly: Vec2[], tx: number, ty: number): boolean {
+function inSight(
+  player: Vec2, poly: Vec2[], tx: number, ty: number, range: number,
+): boolean {
   const dx = tx - player.x;
   const dy = ty - player.y;
   const dist = Math.hypot(dx, dy);
-  if (dist > LANDMARK_RANGE) return false;
-  if (poly.length === 0) return dist <= LANDMARK_RANGE;
+  if (dist > range) return false;
+  if (poly.length === 0) return dist <= range;
 
   let ang = Math.atan2(dy, dx);
   if (ang < 0) ang += Math.PI * 2;
@@ -253,8 +327,26 @@ function drawDebug(ctx: CanvasRenderingContext2D, floor: CompiledFloor, opts: Re
   ctx.strokeStyle = 'rgba(255,255,255,0.45)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(opts.player.x, opts.player.y, VISIBILITY_RADIUS, 0, Math.PI * 2);
+  ctx.arc(opts.player.x, opts.player.y, opts.sightRadius, 0, Math.PI * 2);
   ctx.stroke();
+
+  // 火場的實際致命判定圈（與畫面上的火焰外形分開，方便校正）
+  ctx.strokeStyle = '#ff8a3d';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([10, 8]);
+  for (const f of opts.fires) {
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // 濃煙區邊界
+  ctx.strokeStyle = '#c9d1d9';
+  ctx.lineWidth = 2;
+  for (const sm of floor.map.hazards?.smoke ?? []) {
+    ctx.strokeRect(sm.rect.x, sm.rect.y, sm.rect.w, sm.rect.h);
+  }
 
   if (opts.visPoly.length > 2) {
     ctx.strokeStyle = '#ffd166';

@@ -1,3 +1,5 @@
+import type { HazardSet } from './hazard';
+
 export type FloorId = 'floor1' | 'floor2' | 'floor3';
 
 export interface Rect {
@@ -98,4 +100,6 @@ export interface FloorMap {
   exits: ExitDef[];
   landmarks: Landmark[];
   spawn?: Vec2;
+  /** 火場與濃煙。沒有這一欄的樓層 = 尚未起火 */
+  hazards?: HazardSet;
 }

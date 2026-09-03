@@ -1,4 +1,4 @@
-import { VISIBILITY_METRES } from '../game/config';
+import { SMOKE_VISIBILITY_METRES, VISIBILITY_METRES } from '../game/config';
 
 interface Props {
   onStart: () => void;
@@ -21,10 +21,23 @@ export function StartScreen({ onStart, nickname }: Props) {
         </div>
 
         <p className="briefing-body">
+          <b>你所在的教室已經起火</b>，火勢正在擴大，出口隨時可能被封住。<br />
           請盡快找到安全路線，離開建築物。<br />
           能見度極低，你只看得到身邊約 <b>{VISIBILITY_METRES} 公尺</b>。<br />
           沒有人會告訴你最佳路線 —— <b>你必須自行判斷方向</b>。
         </p>
+
+        {/* 規則要先講清楚，學生才不會把「被燒到」誤會成程式壞掉 */}
+        <ul className="briefing-rules">
+          <li>
+            <b>看到火就退回來。</b>踩進火場只撐得住幾秒，畫面會出現紅色警示條，
+            燒完就是訓練失敗。
+          </li>
+          <li>
+            <b>濃煙裡看不見也走不快。</b>能見度掉到約 {SMOKE_VISIBILITY_METRES} 公尺，
+            腳步會變慢，但濃煙本身不會讓你失敗。
+          </li>
+        </ul>
 
         <div className="ooda">
           <span>Observe</span><i>→</i><span>Orient</span><i>→</i><span>Decide</span><i>→</i><span>Act</span>

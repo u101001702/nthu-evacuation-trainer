@@ -4,6 +4,7 @@ import { HUD } from './components/HUD';
 import { SessionScreen } from './components/SessionScreen';
 import { StartScreen } from './components/StartScreen';
 import { SuccessScreen } from './components/SuccessScreen';
+import { FailScreen } from './components/FailScreen';
 import { FloorTransition } from './components/FloorTransition';
 import { GameEngine, type TransitionState } from './game/engine';
 import { metres, type GameStats, type HudSnapshot } from './game/gameState';
@@ -11,7 +12,7 @@ import { loadSession, saveSession, type SessionInfo } from './game/session';
 import { makeScoreCode, UploadService, type ResultPayload, type UploadState } from './game/upload';
 import { isBackendConfigured } from './config/backend';
 
-type UiPhase = 'session' | 'briefing' | 'playing' | 'escaped';
+type UiPhase = 'session' | 'briefing' | 'playing' | 'escaped' | 'failed';
 
 export default function App() {
   const engineRef = useRef<GameEngine | null>(null);
@@ -87,9 +88,19 @@ export default function App() {
       setLastRecord(record);
       upload.submit(record);
     };
+    // 失敗的紀錄只留在本機檢討，不進排行榜也不上傳
+    engine.onFail = (stats) => {
+      setFinalStats({
+        ...stats,
+        path: [...stats.path],
+        visitedAreas: [...stats.visitedAreas],
+      });
+      setPhase('failed');
+    };
     engine.input.onRestart = () => restart();
     return () => {
       engine.onEscape = null;
+      engine.onFail = null;
       engine.input.onRestart = null;
     };
   }, [engine, restart, upload]);
@@ -140,6 +151,15 @@ export default function App() {
       )}
 
       {phase === 'briefing' && <StartScreen onStart={start} nickname={identity.nickname} />}
+
+      {phase === 'failed' && finalStats && (
+        <FailScreen
+          stats={finalStats}
+          identity={identity}
+          onRestart={restart}
+          onChangeIdentity={() => setPhase('session')}
+        />
+      )}
 
       {phase === 'escaped' && finalStats && (
         <SuccessScreen

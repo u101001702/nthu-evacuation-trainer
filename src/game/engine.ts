@@ -1,5 +1,7 @@
 import {
   PLAYER_RADIUS, PLAYER_SPEED, TRANSITION_MS, VISIBILITY_RADIUS, ZOOM, DEBUG_MODE,
+  FIRE_TOLERANCE_MS, FIRE_RECOVERY_RATE, FIRE_WARN_RANGE,
+  SMOKE_VISIBILITY_RADIUS, SMOKE_SPEED_FACTOR,
 } from './config';
 import { FLOORS, START_FLOOR } from '../maps';
 import { areaAt, compileFloor, rectContains, type CompiledFloor } from './mapBuilder';
@@ -9,6 +11,9 @@ import { applyCamera, FogSystem, type CameraView } from './fog';
 import { renderFloor } from './renderer';
 import { InputSystem } from './input';
 import { AudioSystem } from './audio';
+import {
+  activeFires, fireAt, fireProximity, rectHitByFire, smokeAt, type ActiveFire,
+} from './hazard';
 import { elapsedMs, newStats, type GameStats, type HudSnapshot, type Phase, type StairPrompt } from './gameState';
 import type { FloorId, Vec2 } from './types';
 
@@ -34,6 +39,15 @@ export class GameEngine {
   private debug = DEBUG_MODE;
   private stats: GameStats = newStats(0);
 
+  /* ── 火場狀態 ──
+   * hazardMs 是「開場後經過多久」，火勢半徑完全由它決定。
+   * 刻意不用 performance.now()，才不會因為分頁被切到背景而讓火瞬間長大。 */
+  private hazardMs = 0;
+  private fires: ActiveFire[] = [];
+  private fireExposureMs = 0;
+  private inSmoke = false;
+  private sightRadius = VISIBILITY_RADIUS;
+
   private transition: {
     fromName: string; toName: string; floor: FloorId; spawn: Vec2; t: number; applied: boolean;
   } | null = null;
@@ -43,6 +57,7 @@ export class GameEngine {
   private fpsFrames = 0;
 
   onEscape: ((stats: GameStats) => void) | null = null;
+  onFail: ((stats: GameStats) => void) | null = null;
 
   constructor() {
     this.input.onInteract = () => this.useStair('down');
@@ -62,6 +77,11 @@ export class GameEngine {
     this.visPoly = [];
     this.transition = null;
     this.phase = 'briefing';
+    this.hazardMs = 0;
+    this.fires = activeFires(this.floor.map.hazards, 0);
+    this.fireExposureMs = 0;
+    this.inSmoke = false;
+    this.sightRadius = VISIBILITY_RADIUS;
     this.fog.reset();
     this.stats = newStats(performance.now());
     const a = areaAt(this.floor, this.player);
@@ -100,16 +120,56 @@ export class GameEngine {
       if (this.transition.t >= TRANSITION_MS) this.transition = null;
     }
 
+    if (this.phase === 'playing') {
+      this.hazardMs += dtMs;
+    }
+    this.fires = activeFires(this.floor.map.hazards, this.hazardMs);
+    this.inSmoke = smokeAt(this.floor.map.hazards, this.player) !== null;
+    this.sightRadius = this.inSmoke ? SMOKE_VISIBILITY_RADIUS : VISIBILITY_RADIUS;
+
     if (this.phase === 'playing' && !this.transition) {
       this.movePlayer(dtMs, now);
+      this.updateFireExposure(dtMs, now);
     }
 
     this.visPoly = computeVisibility(
-      this.player.x, this.player.y, VISIBILITY_RADIUS, this.floor.index,
+      this.player.x, this.player.y, this.sightRadius, this.floor.index,
     );
-    if (this.phase !== 'escaped') {
+    if (this.phase === 'playing' || this.phase === 'briefing') {
       this.fog.markExplored(this.floorId, this.floor.map.bounds, this.visPoly);
     }
+  }
+
+  /**
+   * 站在火裡就開始倒數，退出來會回復。
+   * 給緩衝而不是碰到就死，是因為真實火場裡人會本能退開 ——
+   * 我們要訓練的是「發現不對就退回來」，不是懲罰一次失誤。
+   */
+  private updateFireExposure(dtMs: number, now: number): void {
+    const burning = fireAt(this.fires, this.player) !== null;
+    if (burning) {
+      this.fireExposureMs += dtMs;
+      this.audio.fireHiss(now);
+      if (this.fireExposureMs >= FIRE_TOLERANCE_MS) this.fail();
+      return;
+    }
+    this.fireExposureMs = Math.max(0, this.fireExposureMs - dtMs * FIRE_RECOVERY_RATE);
+  }
+
+  private fail(): void {
+    if (this.phase !== 'playing') return;
+    const f = fireAt(this.fires, this.player);
+    const a = areaAt(this.floor, this.player);
+    this.phase = 'failed';
+    this.stats.endedAt = performance.now();
+    this.stats.failedAt = {
+      floor: this.floor.map.name,
+      area: a?.logName ?? a?.label ?? '不明位置',
+      fire: f?.label ?? '火場',
+    };
+    this.fog.setEnabled(false);
+    this.audio.failure();
+    this.onFail?.(this.stats);
   }
 
   private movePlayer(dtMs: number, now: number): void {
@@ -117,14 +177,17 @@ export class GameEngine {
     if (axis.x === 0 && axis.y === 0) return;
 
     this.facing = Math.atan2(axis.y, axis.x);
-    const step = (PLAYER_SPEED * dtMs) / 1000;
+    // 濃煙裡只能低姿勢摸著牆走
+    const speed = PLAYER_SPEED * (this.inSmoke ? SMOKE_SPEED_FACTOR : 1);
+    const step = (speed * dtMs) / 1000;
     const before = { ...this.player };
     const target = { x: this.player.x + axis.x * step, y: this.player.y + axis.y * step };
     this.player = resolveCollisions(target, PLAYER_RADIUS, this.floor.index);
 
     const moved = Math.hypot(this.player.x - before.x, this.player.y - before.y);
     this.stats.distancePx += moved;
-    if (moved > 0.5) this.audio.footstep(now);
+    if (moved > 0.5) this.audio.footstep(now, this.inSmoke);
+    if (this.inSmoke) this.audio.breathing(now);
 
     this.trackArea();
     this.checkEscape();
@@ -160,16 +223,28 @@ export class GameEngine {
 
   /* ── 樓梯 ────────────────────────────────────────────────── */
 
-  private currentStair(): { down: StairPrompt['down']; up: StairPrompt['up'] } & {
+  /** 這座樓梯是否已被火勢吞掉 —— 被封的樓梯不能用，硬闖也下不去 */
+  private stairBlocked(rect: { x: number; y: number; w: number; h: number }): boolean {
+    return rectHitByFire(this.fires, rect);
+  }
+
+  private currentStair(): {
+    down: StairPrompt['down'];
+    up: StairPrompt['up'];
+    blocked: boolean;
+  } & {
     downTarget?: { floor: FloorId; spawn: Vec2; label: string };
     upTarget?: { floor: FloorId; spawn: Vec2; label: string };
   } | null {
     for (const st of this.floor.map.stairs) {
       if (!rectContains(st.rect, this.player)) continue;
+      const blocked = this.stairBlocked(st.rect);
       const out: ReturnType<GameEngine['currentStair']> = {
-        down: st.down ? `前往 ${st.down.label}` : null,
-        up: st.up ? `前往 ${st.up.label}` : null,
+        down: blocked ? null : st.down ? `前往 ${st.down.label}` : null,
+        up: blocked ? null : st.up ? `前往 ${st.up.label}` : null,
+        blocked,
       };
+      if (blocked) return out;
       if (st.down && out) out.downTarget = st.down;
       if (st.up && out) out.upTarget = st.up;
       return out;
@@ -180,7 +255,7 @@ export class GameEngine {
   private useStair(dir: 'down' | 'up'): void {
     if (this.phase !== 'playing' || this.transition) return;
     const s = this.currentStair();
-    if (!s) return;
+    if (!s || s.blocked) return;
     const target = dir === 'down' ? s.downTarget : s.upTarget;
     if (!target) return;
     this.transition = {
@@ -242,7 +317,7 @@ export class GameEngine {
       locationLabel: a?.label ?? '—',
       locationShort: a?.short ?? '—',
       elapsedMs: elapsedMs(this.stats, now),
-      prompt: s ? { down: s.down, up: s.up } : null,
+      prompt: s ? { down: s.down, up: s.up, blocked: s.blocked } : null,
       debug: this.debug,
       phase: this.phase,
       distanceM: this.stats.distancePx / 45,
@@ -250,6 +325,10 @@ export class GameEngine {
       playerX: Math.round(this.player.x),
       playerY: Math.round(this.player.y),
       fps: this.fps,
+      fireProximity: fireProximity(this.fires, this.player, FIRE_WARN_RANGE),
+      fireExposure: Math.min(1, this.fireExposureMs / FIRE_TOLERANCE_MS),
+      inSmoke: this.inSmoke,
+      sightRadius: this.sightRadius,
     };
   }
 
@@ -270,13 +349,16 @@ export class GameEngine {
       facing: this.facing,
       visPoly: this.visPoly,
       debug: this.debug,
-      fogEnabled: this.phase !== 'escaped',
+      fogEnabled: this.phase === 'playing' || this.phase === 'briefing',
+      fires: this.fires,
+      sightRadius: this.sightRadius,
+      timeMs: this.hazardMs,
     });
 
     this.fog.render(ctx, view, this.floorId, this.floor.map.bounds, this.visPoly);
 
-    // 逃生成功後移除黑幕，玩家標記重畫在最上層
-    if (this.phase === 'escaped') {
+    // 結束後（成功或失敗）移除黑幕，把全圖攤開來檢討，玩家標記重畫在最上層
+    if (this.phase === 'escaped' || this.phase === 'failed') {
       applyCamera(ctx, view);
       renderFloor(ctx, this.floor, {
         player: this.player,
@@ -284,6 +366,9 @@ export class GameEngine {
         visPoly: this.visPoly,
         debug: this.debug,
         fogEnabled: false,
+        fires: this.fires,
+        sightRadius: this.sightRadius,
+        timeMs: this.hazardMs,
       });
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);

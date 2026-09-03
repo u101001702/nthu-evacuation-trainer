@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:hazard": "esbuild scripts/verify-hazard.ts --bundle --platform=node --format=esm --outfile=node_modules/.cache/verify-hazard.mjs --log-level=error && node node_modules/.cache/verify-hazard.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

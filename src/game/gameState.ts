@@ -1,7 +1,7 @@
 import { PX_PER_M } from './config';
 import type { FloorId } from './types';
 
-export type Phase = 'briefing' | 'playing' | 'escaped';
+export type Phase = 'briefing' | 'playing' | 'escaped' | 'failed';
 
 export interface GameStats {
   startedAt: number;
@@ -14,6 +14,8 @@ export interface GameStats {
   path: string[];
   exitUsed: string | null;
   exitFloor: FloorId | null;
+  /** 訓練失敗時：被火困住的地點與樓層 */
+  failedAt: { floor: string; area: string; fire: string } | null;
 }
 
 export function newStats(now: number): GameStats {
@@ -27,6 +29,7 @@ export function newStats(now: number): GameStats {
     path: [],
     exitUsed: null,
     exitFloor: null,
+    failedAt: null,
   };
 }
 
@@ -48,6 +51,8 @@ export function metres(px: number): number {
 export interface StairPrompt {
   down: string | null;
   up: string | null;
+  /** 這座樓梯已被火勢封閉 */
+  blocked: boolean;
 }
 
 export interface HudSnapshot {
@@ -63,4 +68,12 @@ export interface HudSnapshot {
   playerX: number;
   playerY: number;
   fps: number;
+  /** 0 = 安全，1 = 已經站在火裡。介於中間 = 逼近火場 */
+  fireProximity: number;
+  /** 火場耐受度已用掉的比例，0–1。滿了就失敗 */
+  fireExposure: number;
+  /** 目前是否身處濃煙 */
+  inSmoke: boolean;
+  /** 目前實際可視半徑（像素）—— 進了濃煙會變短 */
+  sightRadius: number;
 }
